@@ -1,9 +1,11 @@
 ﻿using eShop.WebApp.Components;
 using eShop.ServiceDefaults;
+using eShop.WebApp.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.AddSharedDataProtection("eShop.WebApp");
 
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
@@ -12,6 +14,7 @@ builder.AddApplicationServices();
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
+app.MapAccountEndpoints();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

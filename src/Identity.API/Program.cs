@@ -1,6 +1,7 @@
 ﻿var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.AddSharedDataProtection("eShop.Identity");
 
 builder.Services.AddControllersWithViews();
 
@@ -32,11 +33,9 @@ builder.Services.AddIdentityServer(options =>
 .AddInMemoryApiScopes(Config.GetApiScopes())
 .AddInMemoryApiResources(Config.GetApis())
 .AddInMemoryClients(Config.GetClients(builder.Configuration))
-.AddAspNetIdentity<ApplicationUser>()
-// TODO: Not recommended for production - you need to store your key material somewhere secure
-.AddDeveloperSigningCredential();
+.AddAspNetIdentity<ApplicationUser>();
 
-builder.Services.AddTransient<IProfileService, ProfileService>();
+builder.Services.AddSessionIdentityServices();
 builder.Services.AddTransient<ILoginService<ApplicationUser>, EFLoginService>();
 builder.Services.AddTransient<IRedirectService, RedirectService>();
 

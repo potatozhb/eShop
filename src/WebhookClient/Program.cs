@@ -1,6 +1,7 @@
 ﻿var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.AddSharedDataProtection("eShop.WebhookClient");
 
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 

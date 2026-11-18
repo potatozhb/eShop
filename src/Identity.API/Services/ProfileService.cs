@@ -19,8 +19,15 @@
             if (user == null)
                 throw new ArgumentException("Invalid subject identifier");
 
+            // Preserve the generation captured at interactive login. Never upgrade an old
+            // authorization code or refresh token to the user's latest generation.
+            var version = subject.FindFirstValue(SessionValidationClient.VersionClaim);
+            if (version is null || version != SessionVersionService.FromStamp(user.SecurityStamp))
+                return;
+
             var claims = GetClaimsFromUser(user);
             context.IssuedClaims = claims.ToList();
+            context.IssuedClaims.Add(new Claim(SessionValidationClient.VersionClaim, version));
         }
 
         public async Task IsActiveAsync(IsActiveContext context)
@@ -34,6 +41,10 @@
 
             if (user != null)
             {
+                var version = subject.FindFirstValue(SessionValidationClient.VersionClaim);
+                if (version is null || version != SessionVersionService.FromStamp(user.SecurityStamp))
+                    return;
+
                 if (_userManager.SupportsUserSecurityStamp)
                 {
                     var security_stamp = subject.Claims.Where(c => c.Type == "security_stamp").Select(c => c.Value).SingleOrDefault();

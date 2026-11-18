@@ -1,10 +1,10 @@
 ﻿using eShop.Basket.API.Grpc;
 using eShop.WebApp.Services.OrderStatus.IntegrationEvents;
 using eShop.WebAppComponents.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Components.Server;
 using Microsoft.Extensions.AI;
 using Microsoft.IdentityModel.JsonWebTokens;
 
@@ -60,6 +60,7 @@ public static class Extensions
         var identityUrl = configuration.GetRequiredValue("IdentityUrl");
         var callBackUrl = configuration.GetRequiredValue("CallBackUrl");
         var sessionCookieLifetime = configuration.GetValue("SessionCookieLifetimeMinutes", 60);
+        services.AddSessionValidation(identityUrl);
 
         // Add Authentication services
         services.AddAuthorization();
@@ -68,7 +69,11 @@ public static class Extensions
             options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
         })
-        .AddCookie(options => options.ExpireTimeSpan = TimeSpan.FromMinutes(sessionCookieLifetime))
+        .AddCookie(options =>
+        {
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(sessionCookieLifetime);
+            options.Events.OnValidatePrincipal = SessionValidationExtensions.ValidateSessionAsync;
+        })
         .AddOpenIdConnect(options =>
         {
             options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -79,6 +84,7 @@ public static class Extensions
             options.ResponseType = "code";
             options.SaveTokens = true;
             options.GetClaimsFromUserInfoEndpoint = true;
+            options.ClaimActions.MapUniqueJsonKey(SessionValidationClient.VersionClaim, SessionValidationClient.VersionClaim);
             options.RequireHttpsMetadata = false;
             options.Scope.Add("openid");
             options.Scope.Add("profile");
@@ -87,7 +93,7 @@ public static class Extensions
         });
 
         // Blazor auth services
-        services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
+        services.AddScoped<AuthenticationStateProvider, SessionAuthenticationStateProvider>();
         services.AddCascadingAuthenticationState();
     }
 

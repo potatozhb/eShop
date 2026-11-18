@@ -8,6 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.StackExchange.Redis" />
+    <Compile Include="..\Shared\RedisDataProtectionExtensions.cs" Link="Extensions\RedisDataProtectionExtensions.cs" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
     <ProjectReference Include="..\eShop.ServiceDefaults\eShop.ServiceDefaults.csproj" />
     <PackageReference Include="Asp.Versioning.Http.Client" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />

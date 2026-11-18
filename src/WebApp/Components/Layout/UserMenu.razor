@@ -18,6 +18,11 @@
                     <AntiforgeryToken />
                     <button type="submit">Log out</button>
                 </form>
+                <form class="user-menu-item" method="post" action="/account/signout-everywhere" data-signout-everywhere>
+                    <AntiforgeryToken />
+                    <button type="submit">Sign out everywhere</button>
+                    <span role="alert" hidden>Sign out failed. Please try again.</span>
+                </form>
             </div>
         </div>
     </Authorized>

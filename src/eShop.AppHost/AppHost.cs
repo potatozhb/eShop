@@ -6,7 +6,9 @@ var builder = DistributedApplication.CreateBuilder(args);
 builder.AddForwardedHeaders();
 builder.AddAzureContainerAppEnvironment("aca");
 
-var redis = builder.AddRedis("redis");
+var redis = builder.AddRedis("redis")
+    .WithDataVolume()
+    .WithLifetime(ContainerLifetime.Persistent);
 var rabbitMq = builder.AddRabbitMQ("eventbus")
     .WithLifetime(ContainerLifetime.Persistent);
 var postgres = builder.AddPostgres("postgres")
@@ -23,6 +25,7 @@ var launchProfileName = ShouldUseHttpForEndpoints() ? "http" : "https";
 
 // Services
 var identityApi = builder.AddDotnetProject("identity-api", "../Identity.API", o => o.LaunchProfileName = launchProfileName)
+    .WithReference(redis)
     .WithExternalHttpEndpoints()
     .WithReference(identityDb)
     .WithHttpHealthCheck("/health");
@@ -65,10 +68,12 @@ builder.AddYarp("mobile-bff")
 
 // Apps
 var webhooksClient = builder.AddDotnetProject("webhooksclient", "../WebhookClient", o => o.LaunchProfileName = launchProfileName)
+    .WithReference(redis)
     .WithReference(webHooksApi)
     .WithEnvironment("IdentityUrl", identityEndpoint);
 
 var webApp = builder.AddDotnetProject("webapp", "../WebApp", o => o.LaunchProfileName = launchProfileName)
+    .WithReference(redis)
     .WithExternalHttpEndpoints()
     .WithUrls(c => c.Urls.ForEach(u => u.DisplayText = $"Online Store ({u.Endpoint?.EndpointName})"))
     .WithReference(basketApi)

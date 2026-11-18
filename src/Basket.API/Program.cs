@@ -9,6 +9,6 @@ var app = builder.Build();
 
 app.MapDefaultEndpoints();
 
-app.MapGrpcService<BasketService>();
+app.MapGrpcService<BasketService>().RequireAuthorization();
 
 app.Run();

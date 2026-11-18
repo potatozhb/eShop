@@ -30,6 +30,8 @@ public static class AuthenticationExtensions
         // prevent from mapping "sub" claim to nameidentifier.
         JsonWebTokenHandler.DefaultInboundClaimTypeMap.Remove("sub");
 
+        services.AddSessionValidation(identitySection.GetRequiredValue("Url"));
+
         services.AddAuthentication().AddJwtBearer(options =>
         {
             var identityUrl = identitySection.GetRequiredValue("Url");
@@ -47,6 +49,15 @@ public static class AuthenticationExtensions
 #endif
             
             options.TokenValidationParameters.ValidateAudience = false;
+            options.Events.OnTokenValidated = async context =>
+            {
+                var validator = context.HttpContext.RequestServices.GetRequiredService<SessionValidationClient>();
+                if (context.Principal is null ||
+                    !await validator.IsCurrentAsync(context.Principal, context.HttpContext.RequestAborted))
+                {
+                    context.Fail("The session has been revoked.");
+                }
+            };
         });
 
         services.AddAuthorization();

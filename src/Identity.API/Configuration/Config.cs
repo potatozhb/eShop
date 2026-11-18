@@ -68,6 +68,7 @@
                     },
                     //Allow requesting refresh tokens for long lived API access
                     AllowOfflineAccess = true,
+                    RefreshTokenUsage = TokenUsage.OneTimeOnly,
                     AllowAccessTokensViaBrowser = true,
                     AlwaysIncludeUserClaimsInIdToken = true,
                     AccessTokenLifetime = 60*60*2, // 2 hours
@@ -86,6 +87,7 @@
                     AllowAccessTokensViaBrowser = false,
                     RequireConsent = false,
                     AllowOfflineAccess = true,
+                    RefreshTokenUsage = TokenUsage.OneTimeOnly,
                     AlwaysIncludeUserClaimsInIdToken = true,
                     RequirePkce = false,
                     RedirectUris = new List<string>
@@ -122,6 +124,7 @@
                     AllowAccessTokensViaBrowser = false,
                     RequireConsent = false,
                     AllowOfflineAccess = true,
+                    RefreshTokenUsage = TokenUsage.OneTimeOnly,
                     AlwaysIncludeUserClaimsInIdToken = true,
                     RedirectUris = new List<string>
                     {

@@ -1,0 +1,691 @@
+diff --git a/Directory.Packages.props b/Directory.Packages.props
+index 96c96bd..e37a0c5 100644
+--- a/Directory.Packages.props
++++ b/Directory.Packages.props
+@@ -32,6 +32,8 @@
+     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+     <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.12" />
++    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="10.0.12" />
++    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
+     <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.12" />
+     <PackageVersion Include="Microsoft.Extensions.Identity.Stores" Version="10.0.12" />
+     <PackageVersion Include="Microsoft.OpenApi" Version="2.12.2" />
+@@ -89,4 +91,4 @@
+     <!-- Before license change -->
+     <PackageVersion Include="MediatR" Version="13.1.0" />
+   </ItemGroup>
+-</Project>
+\ No newline at end of file
++</Project>
+diff --git a/eShop.Web.slnf b/eShop.Web.slnf
+index b14530d..b7f106b 100644
+--- a/eShop.Web.slnf
++++ b/eShop.Web.slnf
+@@ -3,30 +3,33 @@
+     "path": "eShop.slnx",
+     "projects": [
+       "src\\Basket.API\\Basket.API.csproj",
++      "src",
+       "src\\Catalog.API\\Catalog.API.csproj",
+-      "src\\EventBusRabbitMQ\\EventBusRabbitMQ.csproj",
++      "src\\eShop.AppHost\\eShop.AppHost.csproj",
++      "src\\eShop.ServiceDefaults\\eShop.ServiceDefaults.csproj",
+       "src\\EventBus\\EventBus.csproj",
++      "src\\EventBusRabbitMQ\\EventBusRabbitMQ.csproj",
+       "src\\Identity.API\\Identity.API.csproj",
+       "src\\IntegrationEventLogEF\\IntegrationEventLogEF.csproj",
+       "src\\Ordering.API\\Ordering.API.csproj",
+-      "src\\OrderProcessor\\OrderProcessor.csproj",
+       "src\\Ordering.Domain\\Ordering.Domain.csproj",
+       "src\\Ordering.Infrastructure\\Ordering.Infrastructure.csproj",
++      "src\\OrderProcessor\\OrderProcessor.csproj",
+       "src\\PaymentProcessor\\PaymentProcessor.csproj",
+-      "src\\WebAppComponents\\WebAppComponents.csproj",
+       "src\\WebApp\\WebApp.csproj",
++      "src\\WebAppComponents\\WebAppComponents.csproj",
+       "src\\WebhookClient\\WebhookClient.csproj",
+       "src\\Webhooks.API\\Webhooks.API.csproj",
+-      "src\\eShop.AppHost\\eShop.AppHost.csproj",
+-      "src\\eShop.ServiceDefaults\\eShop.ServiceDefaults.csproj",
+-      "tests\\Basket.UnitTests\\Basket.UnitTests.csproj",
+-      "tests\\Basket.FunctionalTests\\Basket.FunctionalTests.csproj",
+       "tests\\Application.UnitTests\\Application.UnitTests.csproj",
++      "tests",
++      "tests\\Basket.FunctionalTests\\Basket.FunctionalTests.csproj",
++      "tests\\Basket.UnitTests\\Basket.UnitTests.csproj",
+       "tests\\Catalog.FunctionalTests\\Catalog.FunctionalTests.csproj",
++      "tests\\eShop.AppHost.UnitTests\\eShop.AppHost.UnitTests.csproj",
+       "tests\\Ordering.FunctionalTests\\Ordering.FunctionalTests.csproj",
+       "tests\\Ordering.UnitTests\\Ordering.UnitTests.csproj",
+       "tests\\Webhooks.FunctionalTests\\Webhooks.FunctionalTests.csproj",
+-      "tests\\eShop.AppHost.UnitTests\\eShop.AppHost.UnitTests.csproj"
++      "tests\\Authentication.FunctionalTests\\Authentication.FunctionalTests.csproj"
+     ]
+   }
+ }
+\ No newline at end of file
+diff --git a/eShop.slnx b/eShop.slnx
+index 177e10a..7117e03 100644
+--- a/eShop.slnx
++++ b/eShop.slnx
+@@ -1,4 +1,4 @@
+-﻿<Solution>
++<Solution>
+   <Folder Name="/src/">
+     <Project Path="src/eShop.AppHost/eShop.AppHost.csproj" />
+     <Project Path="src/Basket.API/Basket.API.csproj" />
+@@ -21,6 +21,7 @@
+     <Project Path="src/ClientApp/ClientApp.csproj" />
+   </Folder>
+   <Folder Name="/tests/">
++    <Project Path="tests/Authentication.FunctionalTests/Authentication.FunctionalTests.csproj" />
+     <Project Path="tests/Basket.UnitTests/Basket.UnitTests.csproj" />
+     <Project Path="tests/Basket.FunctionalTests/Basket.FunctionalTests.csproj" />
+     <Project Path="tests/Application.UnitTests/Application.UnitTests.csproj" />
+@@ -37,4 +38,4 @@
+     <File Path="NuGet.config" />
+     <File Path="README.md" />
+   </Folder>
+-</Solution>
+\ No newline at end of file
++</Solution>
+diff --git a/src/Basket.API/Program.cs b/src/Basket.API/Program.cs
+index a1e0c63..17795c0 100644
+--- a/src/Basket.API/Program.cs
++++ b/src/Basket.API/Program.cs
+@@ -9,6 +9,6 @@ var app = builder.Build();
+ 
+ app.MapDefaultEndpoints();
+ 
+-app.MapGrpcService<BasketService>();
++app.MapGrpcService<BasketService>().RequireAuthorization();
+ 
+ app.Run();
+diff --git a/src/Identity.API/Configuration/Config.cs b/src/Identity.API/Configuration/Config.cs
+index f1d41a6..98b8952 100644
+--- a/src/Identity.API/Configuration/Config.cs
++++ b/src/Identity.API/Configuration/Config.cs
+@@ -68,6 +68,7 @@
+                     },
+                     //Allow requesting refresh tokens for long lived API access
+                     AllowOfflineAccess = true,
++                    RefreshTokenUsage = TokenUsage.OneTimeOnly,
+                     AllowAccessTokensViaBrowser = true,
+                     AlwaysIncludeUserClaimsInIdToken = true,
+                     AccessTokenLifetime = 60*60*2, // 2 hours
+@@ -86,6 +87,7 @@
+                     AllowAccessTokensViaBrowser = false,
+                     RequireConsent = false,
+                     AllowOfflineAccess = true,
++                    RefreshTokenUsage = TokenUsage.OneTimeOnly,
+                     AlwaysIncludeUserClaimsInIdToken = true,
+                     RequirePkce = false,
+                     RedirectUris = new List<string>
+@@ -122,6 +124,7 @@
+                     AllowAccessTokensViaBrowser = false,
+                     RequireConsent = false,
+                     AllowOfflineAccess = true,
++                    RefreshTokenUsage = TokenUsage.OneTimeOnly,
+                     AlwaysIncludeUserClaimsInIdToken = true,
+                     RedirectUris = new List<string>
+                     {
+diff --git a/src/Identity.API/Data/ApplicationDbContext.cs b/src/Identity.API/Data/ApplicationDbContext.cs
+index 5b51ebb..512c383 100644
+--- a/src/Identity.API/Data/ApplicationDbContext.cs
++++ b/src/Identity.API/Data/ApplicationDbContext.cs
+@@ -7,6 +7,10 @@
+ /// </remarks>
+ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+ {
++    public DbSet<PersistedGrant> PersistedGrants => Set<PersistedGrant>();
++    public DbSet<AuthenticationSigningKey> AuthenticationSigningKeys => Set<AuthenticationSigningKey>();
++    public DbSet<PushedAuthorizationRequest> PushedAuthorizationRequests => Set<PushedAuthorizationRequest>();
++
+     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+         : base(options)
+     {
+@@ -15,6 +19,18 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+     protected override void OnModelCreating(ModelBuilder builder)
+     {
+         base.OnModelCreating(builder);
++        builder.Entity<PersistedGrant>(entity =>
++        {
++            entity.ToTable("PersistedGrants");
++            entity.HasKey(grant => grant.Key);
++            entity.HasIndex(grant => new { grant.SubjectId, grant.ClientId, grant.Type });
++        });
++        builder.Entity<AuthenticationSigningKey>().ToTable("AuthenticationSigningKeys");
++        builder.Entity<PushedAuthorizationRequest>(entity =>
++        {
++            entity.ToTable("PushedAuthorizationRequests");
++            entity.HasKey(request => request.ReferenceValueHash);
++        });
+         // Customize the ASP.NET Identity model and override the defaults if needed.
+         // For example, you can rename the ASP.NET Identity table names and more.
+         // Add your customizations after calling base.OnModelCreating(builder);
+diff --git a/src/Identity.API/Data/Migrations/ApplicationDbContextModelSnapshot.cs b/src/Identity.API/Data/Migrations/ApplicationDbContextModelSnapshot.cs
+index 92d3a09..b87f70c 100644
+--- a/src/Identity.API/Data/Migrations/ApplicationDbContextModelSnapshot.cs
++++ b/src/Identity.API/Data/Migrations/ApplicationDbContextModelSnapshot.cs
+@@ -3,8 +3,8 @@ using System;
+ using Microsoft.EntityFrameworkCore;
+ using Microsoft.EntityFrameworkCore.Infrastructure;
+ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+-using eShop.Identity.API.Data;
+ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
++using eShop.Identity.API.Data;
+ 
+ #nullable disable
+ 
+@@ -17,11 +17,70 @@ namespace eShop.Identity.API.Data.Migrations
+         {
+ #pragma warning disable 612, 618
+             modelBuilder
+-                .HasAnnotation("ProductVersion", "8.0.0-rc.1.23419.6")
++                .HasAnnotation("ProductVersion", "10.0.12")
+                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
+ 
+             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+ 
++            modelBuilder.Entity("Duende.IdentityServer.Models.PersistedGrant", b =>
++                {
++                    b.Property<string>("Key")
++                        .HasColumnType("text");
++
++                    b.Property<string>("ClientId")
++                        .IsRequired()
++                        .HasColumnType("text");
++
++                    b.Property<DateTime?>("ConsumedTime")
++                        .HasColumnType("timestamp with time zone");
++
++                    b.Property<DateTime>("CreationTime")
++                        .HasColumnType("timestamp with time zone");
++
++                    b.Property<string>("Data")
++                        .IsRequired()
++                        .HasColumnType("text");
++
++                    b.Property<string>("Description")
++                        .HasColumnType("text");
++
++                    b.Property<DateTime?>("Expiration")
++                        .HasColumnType("timestamp with time zone");
++
++                    b.Property<string>("SessionId")
++                        .HasColumnType("text");
++
++                    b.Property<string>("SubjectId")
++                        .IsRequired()
++                        .HasColumnType("text");
++
++                    b.Property<string>("Type")
++                        .IsRequired()
++                        .HasColumnType("text");
++
++                    b.HasKey("Key");
++
++                    b.HasIndex("SubjectId", "ClientId", "Type");
++
++                    b.ToTable("PersistedGrants", (string)null);
++                });
++
++            modelBuilder.Entity("Duende.IdentityServer.Models.PushedAuthorizationRequest", b =>
++                {
++                    b.Property<string>("ReferenceValueHash")
++                        .HasColumnType("text");
++
++                    b.Property<DateTime>("ExpiresAtUtc")
++                        .HasColumnType("timestamp with time zone");
++
++                    b.Property<string>("Parameters")
++                        .HasColumnType("text");
++
++                    b.HasKey("ReferenceValueHash");
++
++                    b.ToTable("PushedAuthorizationRequests", (string)null);
++                });
++
+             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
+                 {
+                     b.Property<string>("Id")
+@@ -265,6 +324,19 @@ namespace eShop.Identity.API.Data.Migrations
+                     b.ToTable("AspNetUsers", (string)null);
+                 });
+ 
++            modelBuilder.Entity("eShop.Identity.API.Services.AuthenticationSigningKey", b =>
++                {
++                    b.Property<string>("Id")
++                        .HasColumnType("text");
++
++                    b.Property<string>("Key")
++                        .HasColumnType("text");
++
++                    b.HasKey("Id");
++
++                    b.ToTable("AuthenticationSigningKeys", (string)null);
++                });
++
+             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+                 {
+                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+diff --git a/src/Identity.API/Identity.API.csproj b/src/Identity.API/Identity.API.csproj
+index a43408d..d1b1d2b 100644
+--- a/src/Identity.API/Identity.API.csproj
++++ b/src/Identity.API/Identity.API.csproj
+@@ -7,6 +7,8 @@
+ 
+   <ItemGroup>
+     <PackageReference Include="Duende.IdentityServer.AspNetIdentity" />
++    <PackageReference Include="Aspire.StackExchange.Redis" />
++    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
+     <PackageReference Include="Duende.IdentityServer.EntityFramework" />
+     <PackageReference Include="Duende.IdentityServer.Storage" />
+     <PackageReference Include="Duende.IdentityServer" />
+@@ -45,13 +47,9 @@
+     <ProjectReference Include="..\eShop.ServiceDefaults\eShop.ServiceDefaults.csproj" />
+   </ItemGroup>
+   
+-  <ItemGroup>
+-    <!-- Don't use this in production -->
+-    <Content Include="tempkey.jwk" CopyToOutputDirectory="PreserveNewest" />
+-  </ItemGroup>
+-
+   <ItemGroup>
+     <Compile Include="..\Shared\MigrateDbContextExtensions.cs" Link="Extensions\MigrateDbContextExtensions.cs" />
+     <Compile Include="..\Shared\ActivityExtensions.cs" Link="Extensions\ActivityExtensions.cs" />
++    <Compile Include="..\Shared\RedisDataProtectionExtensions.cs" Link="Extensions\RedisDataProtectionExtensions.cs" />
+   </ItemGroup>
+ </Project>
+diff --git a/src/Identity.API/Program.cs b/src/Identity.API/Program.cs
+index d9786db..c4612f2 100644
+--- a/src/Identity.API/Program.cs
++++ b/src/Identity.API/Program.cs
+@@ -1,6 +1,7 @@
+ ﻿var builder = WebApplication.CreateBuilder(args);
+ 
+ builder.AddServiceDefaults();
++builder.AddSharedDataProtection("eShop.Identity");
+ 
+ builder.Services.AddControllersWithViews();
+ 
+@@ -32,11 +33,9 @@ builder.Services.AddIdentityServer(options =>
+ .AddInMemoryApiScopes(Config.GetApiScopes())
+ .AddInMemoryApiResources(Config.GetApis())
+ .AddInMemoryClients(Config.GetClients(builder.Configuration))
+-.AddAspNetIdentity<ApplicationUser>()
+-// TODO: Not recommended for production - you need to store your key material somewhere secure
+-.AddDeveloperSigningCredential();
++.AddAspNetIdentity<ApplicationUser>();
+ 
+-builder.Services.AddTransient<IProfileService, ProfileService>();
++builder.Services.AddSessionIdentityServices();
+ builder.Services.AddTransient<ILoginService<ApplicationUser>, EFLoginService>();
+ builder.Services.AddTransient<IRedirectService, RedirectService>();
+ 
+diff --git a/src/Identity.API/Services/ProfileService.cs b/src/Identity.API/Services/ProfileService.cs
+index f42a50f..08c8d88 100644
+--- a/src/Identity.API/Services/ProfileService.cs
++++ b/src/Identity.API/Services/ProfileService.cs
+@@ -19,8 +19,15 @@
+             if (user == null)
+                 throw new ArgumentException("Invalid subject identifier");
+ 
++            // Preserve the generation captured at interactive login. Never upgrade an old
++            // authorization code or refresh token to the user's latest generation.
++            var version = subject.FindFirstValue(SessionValidationClient.VersionClaim);
++            if (version is null || version != SessionVersionService.FromStamp(user.SecurityStamp))
++                return;
++
+             var claims = GetClaimsFromUser(user);
+             context.IssuedClaims = claims.ToList();
++            context.IssuedClaims.Add(new Claim(SessionValidationClient.VersionClaim, version));
+         }
+ 
+         public async Task IsActiveAsync(IsActiveContext context)
+@@ -34,6 +41,10 @@
+ 
+             if (user != null)
+             {
++                var version = subject.FindFirstValue(SessionValidationClient.VersionClaim);
++                if (version is null || version != SessionVersionService.FromStamp(user.SecurityStamp))
++                    return;
++
+                 if (_userManager.SupportsUserSecurityStamp)
+                 {
+                     var security_stamp = subject.Claims.Where(c => c.Type == "security_stamp").Select(c => c.Value).SingleOrDefault();
+diff --git a/src/WebApp/Components/App.razor b/src/WebApp/Components/App.razor
+index a693a50..5dee5b9 100644
+--- a/src/WebApp/Components/App.razor
++++ b/src/WebApp/Components/App.razor
+@@ -23,6 +23,7 @@
+     <script src="js/page-transitions.js"></script>
+     <script src="js/cart-quantity.js"></script>
+     <script src="js/catalog-sort.js"></script>
++    <script src="js/signout-everywhere.js"></script>
+ </body>
+ 
+ </html>
+diff --git a/src/WebApp/Components/Layout/UserMenu.razor b/src/WebApp/Components/Layout/UserMenu.razor
+index 202369c..9d6a6bd 100644
+--- a/src/WebApp/Components/Layout/UserMenu.razor
++++ b/src/WebApp/Components/Layout/UserMenu.razor
+@@ -18,6 +18,11 @@
+                     <AntiforgeryToken />
+                     <button type="submit">Log out</button>
+                 </form>
++                <form class="user-menu-item" method="post" action="/account/signout-everywhere" data-signout-everywhere>
++                    <AntiforgeryToken />
++                    <button type="submit">Sign out everywhere</button>
++                    <span role="alert" hidden>Sign out failed. Please try again.</span>
++                </form>
+             </div>
+         </div>
+     </Authorized>
+diff --git a/src/WebApp/Extensions/Extensions.cs b/src/WebApp/Extensions/Extensions.cs
+index e44c571..92b5ac7 100644
+--- a/src/WebApp/Extensions/Extensions.cs
++++ b/src/WebApp/Extensions/Extensions.cs
+@@ -1,10 +1,10 @@
+ ﻿using eShop.Basket.API.Grpc;
+ using eShop.WebApp.Services.OrderStatus.IntegrationEvents;
+ using eShop.WebAppComponents.Services;
++using Microsoft.AspNetCore.Authentication;
+ using Microsoft.AspNetCore.Authentication.Cookies;
+ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+ using Microsoft.AspNetCore.Components.Authorization;
+-using Microsoft.AspNetCore.Components.Server;
+ using Microsoft.Extensions.AI;
+ using Microsoft.IdentityModel.JsonWebTokens;
+ 
+@@ -60,6 +60,7 @@ public static class Extensions
+         var identityUrl = configuration.GetRequiredValue("IdentityUrl");
+         var callBackUrl = configuration.GetRequiredValue("CallBackUrl");
+         var sessionCookieLifetime = configuration.GetValue("SessionCookieLifetimeMinutes", 60);
++        services.AddSessionValidation(identityUrl);
+ 
+         // Add Authentication services
+         services.AddAuthorization();
+@@ -68,7 +69,11 @@ public static class Extensions
+             options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+             options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+         })
+-        .AddCookie(options => options.ExpireTimeSpan = TimeSpan.FromMinutes(sessionCookieLifetime))
++        .AddCookie(options =>
++        {
++            options.ExpireTimeSpan = TimeSpan.FromMinutes(sessionCookieLifetime);
++            options.Events.OnValidatePrincipal = SessionValidationExtensions.ValidateSessionAsync;
++        })
+         .AddOpenIdConnect(options =>
+         {
+             options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+@@ -79,6 +84,7 @@ public static class Extensions
+             options.ResponseType = "code";
+             options.SaveTokens = true;
+             options.GetClaimsFromUserInfoEndpoint = true;
++            options.ClaimActions.MapUniqueJsonKey(SessionValidationClient.VersionClaim, SessionValidationClient.VersionClaim);
+             options.RequireHttpsMetadata = false;
+             options.Scope.Add("openid");
+             options.Scope.Add("profile");
+@@ -87,7 +93,7 @@ public static class Extensions
+         });
+ 
+         // Blazor auth services
+-        services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
++        services.AddScoped<AuthenticationStateProvider, SessionAuthenticationStateProvider>();
+         services.AddCascadingAuthenticationState();
+     }
+ 
+diff --git a/src/WebApp/Program.cs b/src/WebApp/Program.cs
+index fe2026e..2070121 100644
+--- a/src/WebApp/Program.cs
++++ b/src/WebApp/Program.cs
+@@ -1,9 +1,11 @@
+ ﻿using eShop.WebApp.Components;
+ using eShop.ServiceDefaults;
++using eShop.WebApp.Endpoints;
+ 
+ var builder = WebApplication.CreateBuilder(args);
+ 
+ builder.AddServiceDefaults();
++builder.AddSharedDataProtection("eShop.WebApp");
+ 
+ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+ 
+@@ -12,6 +14,7 @@ builder.AddApplicationServices();
+ var app = builder.Build();
+ 
+ app.MapDefaultEndpoints();
++app.MapAccountEndpoints();
+ 
+ // Configure the HTTP request pipeline.
+ if (!app.Environment.IsDevelopment())
+diff --git a/src/WebApp/WebApp.csproj b/src/WebApp/WebApp.csproj
+index 5b402aa..02d7b4d 100644
+--- a/src/WebApp/WebApp.csproj
++++ b/src/WebApp/WebApp.csproj
+@@ -18,6 +18,8 @@
+ 
+   <ItemGroup>
+     <PackageReference Include="Asp.Versioning.Http.Client" />
++    <PackageReference Include="Aspire.StackExchange.Redis" />
++    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
+     <PackageReference Include="Aspire.Azure.AI.OpenAI" />
+     <PackageReference Include="CommunityToolkit.Aspire.OllamaSharp" />
+     <PackageReference Include="Microsoft.Extensions.ServiceDiscovery.Yarp" />
+@@ -29,6 +31,7 @@
+ 
+   <ItemGroup>
+     <Protobuf Include="..\Basket.API\Proto\basket.proto" GrpcServices="Client" />
++    <Compile Include="..\Shared\RedisDataProtectionExtensions.cs" Link="Extensions\RedisDataProtectionExtensions.cs" />
+   </ItemGroup>
+ 
+ </Project>
+diff --git a/src/WebhookClient/Extensions/Extensions.cs b/src/WebhookClient/Extensions/Extensions.cs
+index 7220571..6c80d35 100644
+--- a/src/WebhookClient/Extensions/Extensions.cs
++++ b/src/WebhookClient/Extensions/Extensions.cs
+@@ -1,7 +1,7 @@
+ ﻿using Microsoft.AspNetCore.Authentication.Cookies;
+ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
++using Microsoft.AspNetCore.Authentication;
+ using Microsoft.AspNetCore.Components.Authorization;
+-using Microsoft.AspNetCore.Components.Server;
+ 
+ namespace eShop.WebhookClient.Extensions;
+ 
+@@ -29,6 +29,7 @@ public static class Extensions
+         var identityUrl = configuration.GetRequiredValue("IdentityUrl");
+         var callBackUrl = configuration.GetRequiredValue("CallBackUrl");
+         var sessionCookieLifetime = configuration.GetValue("SessionCookieLifetimeMinutes", 60);
++        services.AddSessionValidation(identityUrl);
+ 
+         // Add Authentication services
+         services.AddAuthorization();
+@@ -40,6 +41,7 @@ public static class Extensions
+         .AddCookie(options =>
+         {
+             options.ExpireTimeSpan = TimeSpan.FromMinutes(sessionCookieLifetime);
++            options.Events.OnValidatePrincipal = SessionValidationExtensions.ValidateSessionAsync;
+ 
+             // Must be distinct from WebApp's cookie name, otherwise the two sites will interfere
+             // with each other when both are on localhost (yes, even when they are on different ports)
+@@ -55,12 +57,13 @@ public static class Extensions
+             options.ResponseType = "code";
+             options.SaveTokens = true;
+             options.GetClaimsFromUserInfoEndpoint = true;
++            options.ClaimActions.MapUniqueJsonKey(SessionValidationClient.VersionClaim, SessionValidationClient.VersionClaim);
+             options.RequireHttpsMetadata = false;
+             options.Scope.Add("openid");
+             options.Scope.Add("webhooks");
+         });
+ 
+-        services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
++        services.AddScoped<AuthenticationStateProvider, SessionAuthenticationStateProvider>();
+         services.AddCascadingAuthenticationState();
+     }
+ }
+diff --git a/src/WebhookClient/Program.cs b/src/WebhookClient/Program.cs
+index 3bb5e54..7ceb0a5 100644
+--- a/src/WebhookClient/Program.cs
++++ b/src/WebhookClient/Program.cs
+@@ -1,6 +1,7 @@
+ ﻿var builder = WebApplication.CreateBuilder(args);
+ 
+ builder.AddServiceDefaults();
++builder.AddSharedDataProtection("eShop.WebhookClient");
+ 
+ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+ 
+diff --git a/src/WebhookClient/WebhookClient.csproj b/src/WebhookClient/WebhookClient.csproj
+index 31e2760..922f82a 100644
+--- a/src/WebhookClient/WebhookClient.csproj
++++ b/src/WebhookClient/WebhookClient.csproj
+@@ -8,6 +8,9 @@
+   </PropertyGroup>
+ 
+   <ItemGroup>
++    <PackageReference Include="Aspire.StackExchange.Redis" />
++    <Compile Include="..\Shared\RedisDataProtectionExtensions.cs" Link="Extensions\RedisDataProtectionExtensions.cs" />
++    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
+     <ProjectReference Include="..\eShop.ServiceDefaults\eShop.ServiceDefaults.csproj" />
+     <PackageReference Include="Asp.Versioning.Http.Client" />
+     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+diff --git a/src/eShop.AppHost/AppHost.cs b/src/eShop.AppHost/AppHost.cs
+index 6650f90..fc29645 100644
+--- a/src/eShop.AppHost/AppHost.cs
++++ b/src/eShop.AppHost/AppHost.cs
+@@ -6,7 +6,9 @@ var builder = DistributedApplication.CreateBuilder(args);
+ builder.AddForwardedHeaders();
+ builder.AddAzureContainerAppEnvironment("aca");
+ 
+-var redis = builder.AddRedis("redis");
++var redis = builder.AddRedis("redis")
++    .WithDataVolume()
++    .WithLifetime(ContainerLifetime.Persistent);
+ var rabbitMq = builder.AddRabbitMQ("eventbus")
+     .WithLifetime(ContainerLifetime.Persistent);
+ var postgres = builder.AddPostgres("postgres")
+@@ -23,6 +25,7 @@ var launchProfileName = ShouldUseHttpForEndpoints() ? "http" : "https";
+ 
+ // Services
+ var identityApi = builder.AddDotnetProject("identity-api", "../Identity.API", o => o.LaunchProfileName = launchProfileName)
++    .WithReference(redis)
+     .WithExternalHttpEndpoints()
+     .WithReference(identityDb)
+     .WithHttpHealthCheck("/health");
+@@ -65,10 +68,12 @@ builder.AddYarp("mobile-bff")
+ 
+ // Apps
+ var webhooksClient = builder.AddDotnetProject("webhooksclient", "../WebhookClient", o => o.LaunchProfileName = launchProfileName)
++    .WithReference(redis)
+     .WithReference(webHooksApi)
+     .WithEnvironment("IdentityUrl", identityEndpoint);
+ 
+ var webApp = builder.AddDotnetProject("webapp", "../WebApp", o => o.LaunchProfileName = launchProfileName)
++    .WithReference(redis)
+     .WithExternalHttpEndpoints()
+     .WithUrls(c => c.Urls.ForEach(u => u.DisplayText = $"Online Store ({u.Endpoint?.EndpointName})"))
+     .WithReference(basketApi)
+diff --git a/src/eShop.ServiceDefaults/AuthenticationExtensions.cs b/src/eShop.ServiceDefaults/AuthenticationExtensions.cs
+index 738280a..5dfa741 100644
+--- a/src/eShop.ServiceDefaults/AuthenticationExtensions.cs
++++ b/src/eShop.ServiceDefaults/AuthenticationExtensions.cs
+@@ -30,6 +30,8 @@ public static class AuthenticationExtensions
+         // prevent from mapping "sub" claim to nameidentifier.
+         JsonWebTokenHandler.DefaultInboundClaimTypeMap.Remove("sub");
+ 
++        services.AddSessionValidation(identitySection.GetRequiredValue("Url"));
++
+         services.AddAuthentication().AddJwtBearer(options =>
+         {
+             var identityUrl = identitySection.GetRequiredValue("Url");
+@@ -47,6 +49,15 @@ public static class AuthenticationExtensions
+ #endif
+             
+             options.TokenValidationParameters.ValidateAudience = false;
++            options.Events.OnTokenValidated = async context =>
++            {
++                var validator = context.HttpContext.RequestServices.GetRequiredService<SessionValidationClient>();
++                if (context.Principal is null ||
++                    !await validator.IsCurrentAsync(context.Principal, context.HttpContext.RequestAborted))
++                {
++                    context.Fail("The session has been revoked.");
++                }
++            };
+         });
+ 
+         services.AddAuthorization();
+diff --git a/tests/Ordering.FunctionalTests/Ordering.FunctionalTests.csproj b/tests/Ordering.FunctionalTests/Ordering.FunctionalTests.csproj
+index 3f2f553..1cb7a37 100644
+--- a/tests/Ordering.FunctionalTests/Ordering.FunctionalTests.csproj
++++ b/tests/Ordering.FunctionalTests/Ordering.FunctionalTests.csproj
+@@ -11,6 +11,7 @@
+   <ItemGroup>
+     <PackageReference Include="Asp.Versioning.Http.Client" />
+     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
++    <PackageReference Include="Aspire.Hosting.Redis" />
+     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+     <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+     <PackageReference Include="xunit.v3.mtp-v2" />
+@@ -23,4 +24,4 @@
+     <ProjectReference Include="..\..\src\Ordering.Infrastructure\Ordering.Infrastructure.csproj" IsAspireProjectResource="false" />
+   </ItemGroup>
+ 
+-</Project>
+\ No newline at end of file
++</Project>
+diff --git a/tests/Ordering.FunctionalTests/OrderingApiFixture.cs b/tests/Ordering.FunctionalTests/OrderingApiFixture.cs
+index 9ca68ab..6bee84b 100644
+--- a/tests/Ordering.FunctionalTests/OrderingApiFixture.cs
++++ b/tests/Ordering.FunctionalTests/OrderingApiFixture.cs
+@@ -22,7 +22,8 @@ public sealed class OrderingApiFixture : WebApplicationFactory<Program>, IAsyncL
+         var appBuilder = DistributedApplication.CreateBuilder(options);
+         Postgres = appBuilder.AddPostgres("OrderingDB");
+         IdentityDB = appBuilder.AddPostgres("IdentityDB");
+-        IdentityApi = appBuilder.AddProject<Projects.Identity_API>("identity-api").WithReference(IdentityDB);
++        var redis = appBuilder.AddRedis("redis");
++        IdentityApi = appBuilder.AddProject<Projects.Identity_API>("identity-api").WithReference(IdentityDB).WithReference(redis);
+         _app = appBuilder.Build();
+     }
+ 
+diff --git a/tests/README.md b/tests/README.md
+index 34ba1f4..4ae4728 100644
+--- a/tests/README.md
++++ b/tests/README.md
+@@ -2,4 +2,32 @@
+ 
+ This directory contains a collection of unit and functional tests for validating the behavior of various components in the eShop application.
+ 
+-**NOTE:** Functional tests in this leverage the Aspire host to spin up test containers and require that Docker be running as a pre-requisite.
+\ No newline at end of file
++`Authentication.FunctionalTests` runs without containers:
++
++```powershell
++dotnet test --project tests/Authentication.FunctionalTests/Authentication.FunctionalTests.csproj
++```
++
++It uses real ASP.NET cookie, antiforgery and JWT handlers, IdentityServer authorization-code and
++rotating refresh-token flows, two HTTP clients with independent cookie jars, two instances of
++each service, and the production Ordering, Webhooks and Basket endpoint mappings. SQLite and
++shared file key rings replace PostgreSQL and Redis in these tests; business repositories are
++substituted. The tests check the five-second revocation deadline, disconnected clients,
++simultaneous actions, user isolation, recovery and ordinary sign-out.
++
++Sign out everywhere advances the user's security stamp in the identity database. Cookies and
++tokens carry a hash of the stamp captured during interactive login. Every protected HTTP request
++checks that generation against Identity.API without caching successful checks; unavailable
++validation fails closed after at most two seconds. Interactive circuits also revalidate.
++Identity cookies validate the stamp on every request, and IdentityServer checks the captured
++generation when validating refresh tokens. Refresh and authorization grants, pushed requests
++and signing credentials are shared through the identity database. Signing credentials are
++protected with the Identity data-protection key ring. Each web application shares its own
++data-protection key ring through Redis, which AppHost now persists in a data volume.
++
++Deploy the identity database migrations and provide the same PostgreSQL and persistent Redis
++services to all instances. Existing credentials without a session-version claim require a new
++interactive sign-in. The sample database signing-key store should use managed signing
++credentials and key rotation in production, as with the previous developer signing credential.
++
++**NOTE:** The other functional test projects use Aspire to spin up containers and require Docker to be running.

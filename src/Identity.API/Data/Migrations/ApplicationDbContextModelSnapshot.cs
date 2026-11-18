@@ -3,8 +3,8 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using eShop.Identity.API.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using eShop.Identity.API.Data;
 
 #nullable disable
 
@@ -17,10 +17,69 @@ namespace eShop.Identity.API.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.0-rc.1.23419.6")
+                .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Duende.IdentityServer.Models.PersistedGrant", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ConsumedTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("Expiration")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SessionId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("SubjectId", "ClientId", "Type");
+
+                    b.ToTable("PersistedGrants", (string)null);
+                });
+
+            modelBuilder.Entity("Duende.IdentityServer.Models.PushedAuthorizationRequest", b =>
+                {
+                    b.Property<string>("ReferenceValueHash")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Parameters")
+                        .HasColumnType("text");
+
+                    b.HasKey("ReferenceValueHash");
+
+                    b.ToTable("PushedAuthorizationRequests", (string)null);
+                });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
@@ -263,6 +322,19 @@ namespace eShop.Identity.API.Data.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("eShop.Identity.API.Services.AuthenticationSigningKey", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Key")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AuthenticationSigningKeys", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

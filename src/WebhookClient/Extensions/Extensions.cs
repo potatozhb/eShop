@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Components.Server;
 
 namespace eShop.WebhookClient.Extensions;
 
@@ -29,6 +29,7 @@ public static class Extensions
         var identityUrl = configuration.GetRequiredValue("IdentityUrl");
         var callBackUrl = configuration.GetRequiredValue("CallBackUrl");
         var sessionCookieLifetime = configuration.GetValue("SessionCookieLifetimeMinutes", 60);
+        services.AddSessionValidation(identityUrl);
 
         // Add Authentication services
         services.AddAuthorization();
@@ -40,6 +41,7 @@ public static class Extensions
         .AddCookie(options =>
         {
             options.ExpireTimeSpan = TimeSpan.FromMinutes(sessionCookieLifetime);
+            options.Events.OnValidatePrincipal = SessionValidationExtensions.ValidateSessionAsync;
 
             // Must be distinct from WebApp's cookie name, otherwise the two sites will interfere
             // with each other when both are on localhost (yes, even when they are on different ports)
@@ -55,12 +57,13 @@ public static class Extensions
             options.ResponseType = "code";
             options.SaveTokens = true;
             options.GetClaimsFromUserInfoEndpoint = true;
+            options.ClaimActions.MapUniqueJsonKey(SessionValidationClient.VersionClaim, SessionValidationClient.VersionClaim);
             options.RequireHttpsMetadata = false;
             options.Scope.Add("openid");
             options.Scope.Add("webhooks");
         });
 
-        services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
+        services.AddScoped<AuthenticationStateProvider, SessionAuthenticationStateProvider>();
         services.AddCascadingAuthenticationState();
     }
 }

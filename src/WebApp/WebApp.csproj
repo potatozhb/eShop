@@ -18,6 +18,8 @@
 
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Http.Client" />
+    <PackageReference Include="Aspire.StackExchange.Redis" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
     <PackageReference Include="Aspire.Azure.AI.OpenAI" />
     <PackageReference Include="CommunityToolkit.Aspire.OllamaSharp" />
     <PackageReference Include="Microsoft.Extensions.ServiceDiscovery.Yarp" />
@@ -29,6 +31,7 @@
 
   <ItemGroup>
     <Protobuf Include="..\Basket.API\Proto\basket.proto" GrpcServices="Client" />
+    <Compile Include="..\Shared\RedisDataProtectionExtensions.cs" Link="Extensions\RedisDataProtectionExtensions.cs" />
   </ItemGroup>
 
 </Project>

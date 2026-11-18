@@ -22,7 +22,8 @@ public sealed class OrderingApiFixture : WebApplicationFactory<Program>, IAsyncL
         var appBuilder = DistributedApplication.CreateBuilder(options);
         Postgres = appBuilder.AddPostgres("OrderingDB");
         IdentityDB = appBuilder.AddPostgres("IdentityDB");
-        IdentityApi = appBuilder.AddProject<Projects.Identity_API>("identity-api").WithReference(IdentityDB);
+        var redis = appBuilder.AddRedis("redis");
+        IdentityApi = appBuilder.AddProject<Projects.Identity_API>("identity-api").WithReference(IdentityDB).WithReference(redis);
         _app = appBuilder.Build();
     }
 

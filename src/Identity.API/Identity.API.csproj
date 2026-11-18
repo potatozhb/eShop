@@ -7,6 +7,8 @@
 
   <ItemGroup>
     <PackageReference Include="Duende.IdentityServer.AspNetIdentity" />
+    <PackageReference Include="Aspire.StackExchange.Redis" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
     <PackageReference Include="Duende.IdentityServer.EntityFramework" />
     <PackageReference Include="Duende.IdentityServer.Storage" />
     <PackageReference Include="Duende.IdentityServer" />
@@ -46,12 +48,8 @@
   </ItemGroup>
   
   <ItemGroup>
-    <!-- Don't use this in production -->
-    <Content Include="tempkey.jwk" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Compile Include="..\Shared\MigrateDbContextExtensions.cs" Link="Extensions\MigrateDbContextExtensions.cs" />
     <Compile Include="..\Shared\ActivityExtensions.cs" Link="Extensions\ActivityExtensions.cs" />
+    <Compile Include="..\Shared\RedisDataProtectionExtensions.cs" Link="Extensions\RedisDataProtectionExtensions.cs" />
   </ItemGroup>
 </Project>

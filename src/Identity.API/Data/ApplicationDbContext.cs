@@ -7,6 +7,10 @@
 /// </remarks>
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
+    public DbSet<PersistedGrant> PersistedGrants => Set<PersistedGrant>();
+    public DbSet<AuthenticationSigningKey> AuthenticationSigningKeys => Set<AuthenticationSigningKey>();
+    public DbSet<PushedAuthorizationRequest> PushedAuthorizationRequests => Set<PushedAuthorizationRequest>();
+
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
@@ -15,6 +19,18 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.Entity<PersistedGrant>(entity =>
+        {
+            entity.ToTable("PersistedGrants");
+            entity.HasKey(grant => grant.Key);
+            entity.HasIndex(grant => new { grant.SubjectId, grant.ClientId, grant.Type });
+        });
+        builder.Entity<AuthenticationSigningKey>().ToTable("AuthenticationSigningKeys");
+        builder.Entity<PushedAuthorizationRequest>(entity =>
+        {
+            entity.ToTable("PushedAuthorizationRequests");
+            entity.HasKey(request => request.ReferenceValueHash);
+        });
         // Customize the ASP.NET Identity model and override the defaults if needed.
         // For example, you can rename the ASP.NET Identity table names and more.
         // Add your customizations after calling base.OnModelCreating(builder);
